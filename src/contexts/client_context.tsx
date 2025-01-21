@@ -181,12 +181,13 @@ export function ClientProvider({
     }
   }, [step, stateRef, sendRef, setMessageHandler]);
 
-  const onInterruptClick = useCallback((): void => {
-    dispatch({ type: "interrupted" });
-  }, []);
-
   const onDisconnectClick = useEventCallback(onDisconnect);
   const onReconnectClick = useEventCallback(onReconnect);
+
+  const onInterruptClick = useCallback((): void => {
+    onDisconnectClick();
+    dispatch({ type: "interrupted" });
+  }, [onDisconnectClick]);
 
   const addCommand = useCallback((command: CommandData): void => {
     dispatch({ type: "command", command });

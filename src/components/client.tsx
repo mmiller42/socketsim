@@ -293,15 +293,21 @@ function Client({
           </button>
         </div>
       </legend>
-      <div style={{ display: "flex", flexDirection: "row", gap: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          gap: 16,
+          width: "calc(100vw - 64px)",
+        }}
+      >
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             gap: 16,
             alignItems: "center",
-            minWidth: 300,
-            maxWidth: "50%",
+            width: "50%",
           }}
         >
           <div>
@@ -392,11 +398,13 @@ function Client({
             </div>
           </div>
         </div>
-        <div style={{ flex: 1 }}>
-          <h3>Data stored on disk</h3>
-          <pre>{persistedStateJson}</pre>
-          <h3>In-memory state</h3>
-          <pre>{stateJson}</pre>
+        <div style={{ width: "50%" }}>
+          <div style={{}}>
+            <h3>Data stored on disk</h3>
+            <pre>{persistedStateJson}</pre>
+            <h3>In-memory state</h3>
+            <pre>{stateJson}</pre>
+          </div>
         </div>
       </div>
     </fieldset>

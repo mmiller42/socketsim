@@ -356,7 +356,10 @@ export function reducer(
     }
 
     case "interrupted": {
-      return initializeState(persistedState({ ...base, ...state }));
+      return initializeState({
+        ...persistedState({ ...base, ...state }),
+        connected: false,
+      });
     }
 
     case "command": {
