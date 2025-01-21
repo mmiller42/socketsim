@@ -7,9 +7,13 @@ export function useValueRef<T>(value: T): MutableRefObject<T> {
   return ref;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useEventCallback<TArgs extends any[] | readonly any[], TReturn>(
   fn: (...args: TArgs) => TReturn
 ): (...args: TArgs) => TReturn {
   const fnRef = useValueRef(fn);
-  return useCallback((...args: TArgs): TReturn => fnRef.current(...args), []);
+  return useCallback(
+    (...args: TArgs): TReturn => fnRef.current(...args),
+    [fnRef]
+  );
 }

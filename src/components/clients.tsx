@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { v4 as uuid } from "uuid";
 
 import {
@@ -6,10 +6,19 @@ import {
   PersistedClientState,
 } from "../contexts/client_context/state";
 import { ClientContainer } from "./client";
+import { useValueRef } from "../utils/hooks";
 
 type ClientStorageItem = {
   clientId: string;
+  username: string;
+  password: string;
   initialState: PersistedClientState;
+};
+
+type LocalStorageValue = {
+  username: string;
+  password: string;
+  state: PersistedClientState;
 };
 
 export function Clients() {
@@ -25,22 +34,28 @@ export function Clients() {
 
       const [, clientId] = match;
 
-      let initialState: PersistedClientState | null = null;
+      let result: LocalStorageValue | null = null;
+
       try {
-        initialState = JSON.parse(localStorage.getItem(key)!);
+        result = JSON.parse(localStorage.getItem(key)!);
       } catch {
         continue;
       }
 
       if (
-        initialState !== null &&
-        typeof initialState === "object" &&
-        (initialState.cursor === null ||
-          typeof initialState.cursor === "string") &&
-        Array.isArray(initialState.commands) &&
-        Array.isArray(initialState.records)
+        result !== null &&
+        typeof result === "object" &&
+        typeof result.username === "string" &&
+        typeof result.password === "string" &&
+        result.state !== null &&
+        typeof result.state === "object" &&
+        (result.state.cursor === null ||
+          typeof result.state.cursor === "string") &&
+        Array.isArray(result.state.commands) &&
+        Array.isArray(result.state.records)
       ) {
-        clients.push({ clientId, initialState });
+        const { username, password, state: initialState } = result;
+        clients.push({ clientId, username, password, initialState });
       }
     }
 
@@ -48,9 +63,20 @@ export function Clients() {
   });
 
   const addClient = (): void => {
+    let username: string;
+    do {
+      username = prompt("Username") ?? "";
+    } while (!username);
+    const password = prompt("Password (optional)") ?? "password";
+
     setClients((clients) => [
       ...clients,
-      { clientId: uuid(), initialState: initialPersistedState },
+      {
+        clientId: uuid(),
+        username,
+        password,
+        initialState: initialPersistedState,
+      },
     ]);
   };
 
@@ -61,14 +87,17 @@ export function Clients() {
     );
   }, []);
 
+  const clientsRef = useValueRef(clients);
+
   const onPersistedStateChange = useCallback(
     (clientId: string, state: PersistedClientState): void => {
-      localStorage.setItem(`clientDb:${clientId}`, JSON.stringify(state));
+      const clients = clientsRef.current;
+      const client = clients.find((client) => client.clientId === clientId)!;
+      const value: LocalStorageValue = { ...client, state };
+      localStorage.setItem(`clientDb:${clientId}`, JSON.stringify(value));
     },
-    []
+    [clientsRef]
   );
-
-  const clientSelectRef = useRef<HTMLSelectElement>(null);
 
   return (
     <div>
@@ -77,10 +106,12 @@ export function Clients() {
       </div>
       <hr />
       <div>
-        {clients.map(({ clientId, initialState }) => (
+        {clients.map(({ clientId, username, password, initialState }) => (
           <ClientContainer
             key={clientId}
             clientId={clientId}
+            username={username}
+            password={password}
             initialState={initialState}
             onPersistedStateChange={onPersistedStateChange}
             onDelete={onDelete}

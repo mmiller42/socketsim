@@ -99,6 +99,7 @@ function recordsById(records: Doc[]): Record<string, Doc> {
     let key: string;
     switch (record.type) {
       case "category":
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         key = `category:${(record as any).categoryTableId}:${record.id}`;
         break;
       default:

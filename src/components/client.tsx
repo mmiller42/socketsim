@@ -20,16 +20,55 @@ import { useEventCallback } from "../utils/hooks";
 
 export type ClientContainerProps = ClientProps & {
   initialState: PersistedClientState;
+  password: string;
 };
 
-const SOCKET_URL = "wss://somewhere";
+const SERVER_HOST = "http://127.0.0.1:3001";
 
-async function createSocket(): Promise<WebSocket> {
-  return new WebSocket(SOCKET_URL);
+async function createSocket(
+  username: string,
+  password: string
+): Promise<WebSocket> {
+  const loginResponse = await fetch(`${SERVER_HOST}/api/authentication/sync`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json, text/plain, */*",
+    },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!loginResponse.ok) {
+    console.error("Login request failed:", loginResponse);
+    throw new Error("login request failed");
+  }
+
+  const { accessToken }: { accessToken: string } = await loginResponse.json();
+
+  const syncResponse = await fetch(`${SERVER_HOST}/api/sync`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json, text/plain, */*",
+      authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({}),
+  });
+
+  if (!syncResponse.ok) {
+    console.error("Sync request failed:", syncResponse);
+    throw new Error("Sync request failed");
+  }
+
+  const { syncId }: { syncId: string } = await syncResponse.json();
+
+  return new WebSocket(`${SERVER_HOST}/api/sync/${syncId}`);
 }
 
 export function ClientContainer({
   clientId,
+  username,
+  password,
   initialState,
   onPersistedStateChange,
   onDelete,
@@ -71,7 +110,7 @@ export function ClientContainer({
   }, [socket]);
 
   const onReconnect = useCallback(() => {
-    createSocket()
+    createSocket(username, password)
       .then((socket) => {
         setSocket((current) => {
           if (current) return current;
@@ -81,7 +120,7 @@ export function ClientContainer({
       .catch((e) => {
         console.error(`[${clientId}] createSocket error:`, e);
       });
-  }, [clientId]);
+  }, [clientId, username, password]);
 
   useEffect(() => {
     onReconnect();
@@ -152,6 +191,7 @@ export function ClientContainer({
     >
       <Client
         clientId={clientId}
+        username={username}
         onPersistedStateChange={onPersistedStateChange}
         onDelete={onDelete}
       />
@@ -161,6 +201,7 @@ export function ClientContainer({
 
 type ClientProps = {
   clientId: string;
+  username: string;
   onPersistedStateChange: (
     clientId: string,
     state: PersistedClientState
@@ -174,7 +215,12 @@ const defaultCommandDataValue = JSON.stringify(
   2
 );
 
-function Client({ clientId, onPersistedStateChange, onDelete }: ClientProps) {
+function Client({
+  clientId,
+  username,
+  onPersistedStateChange,
+  onDelete,
+}: ClientProps) {
   const {
     state,
     nextLabel,
@@ -232,13 +278,15 @@ function Client({ clientId, onPersistedStateChange, onDelete }: ClientProps) {
       >
         <h2>{connected ? "📶" : "📵"}</h2>
         <h2>
-          Client <code>{clientId}</code>
+          Client <code>{username}</code> (<code>{clientId}</code>)
         </h2>
         <div>
           <button
             onClick={() => {
-              onDisconnectClick();
-              onDelete(clientId);
+              if (confirm("Delete this client device?")) {
+                onDisconnectClick();
+                onDelete(clientId);
+              }
             }}
           >
             Delete

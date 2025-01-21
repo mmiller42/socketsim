@@ -1,4 +1,4 @@
-import React, {
+import {
   createContext,
   ReactNode,
   SetStateAction,
@@ -19,7 +19,7 @@ import {
   PushMessage,
   PushReply,
 } from "../types";
-import { useEventCallback } from "../utils/hooks";
+import { useEventCallback, useValueRef } from "../utils/hooks";
 import {
   ClientState,
   PersistedClientState,
@@ -151,14 +151,12 @@ export function ClientProvider({
 
   const step = "step" in state ? state.step : undefined;
 
-  const stateRef = useRef(state);
-
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+  const stateRef = useValueRef(state);
+  const sendRef = useValueRef(send);
 
   useEffect(() => {
     const state = stateRef.current;
+    const send = sendRef.current;
 
     switch (step) {
       case "awaitingAck":
@@ -181,7 +179,7 @@ export function ClientProvider({
         });
         break;
     }
-  }, [step]);
+  }, [step, stateRef, sendRef, setMessageHandler]);
 
   const onInterruptClick = useCallback((): void => {
     dispatch({ type: "interrupted" });
